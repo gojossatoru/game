@@ -20,7 +20,7 @@ class Mechanics(unittest.TestCase):
             w.objects=[[kind,205,GROUND-40,24,28]];before=w.score;w.step(.001);self.assertEqual(w.score-before,value)
     def test_slide(self):
         for sliding in (False,True):
-            w=World();w.objects=[['tree',195,GROUND-78,95,28]];w.step(.001,False,sliding);self.assertEqual(w.over,not sliding)
+            w=World();w.objects=[['tree',195,GROUND-88,95,40]];w.step(.001,False,sliding);self.assertEqual(w.over,not sliding)
     def test_pits_and_rocks(self):
         for kind,y,width,height in [('pit',GROUND,120,35),('rock',GROUND-43,52,43)]:
             w=World();w.objects=[[kind,190,y,width,height]];w.step(.001);self.assertTrue(w.over)
@@ -60,7 +60,18 @@ class Mechanics(unittest.TestCase):
             seen_pit |= any(t[0]=='pit' for t in w.terrain)
             sizes.update(o[3] for o in w.objects if o[0]=='rock')
             w.objects=[]
-        self.assertTrue(seen_pit);self.assertEqual(sizes,{52,78})
+        self.assertTrue(seen_pit);self.assertEqual(sizes,{104,156})
+    def test_smooth_theme_and_spacing(self):
+        w=World()
+        for time,expected in [(44.99,0),(45,0),(47,.5),(49,1),(90,1),(92,.5),(94,0)]:
+            w.time=time;self.assertAlmostEqual(w.night_mix,expected)
+        w.objects=[['rock',500,424,104,86]]
+        self.assertFalse(w.clear_for_obstacle(800,100))
+        self.assertTrue(w.clear_for_obstacle(1300,100))
+    def test_big_rock_jump_clearance(self):
+        w=World();w.jump();top=GROUND
+        for _ in range(100):w.step(.01,True);top=min(top,w.y)
+        self.assertLess(top,GROUND-150)
     def test_render(self):
         g=Game()
         for mode in ('title','play','pause','over'):

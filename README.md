@@ -38,3 +38,5 @@ The executable is currently unsigned. Chrome or Windows may still block an unfam
 Tree obstacles replace floating branches; individual trees are no longer background decorations. Slide beneath their branches. Ground tiles are clipped out of pit spans and share the same terrain scale. Night rendering darkens object sprites and adds stars, while retaining the supplied night boar/forest variants. Game over plays one descending sad oink.
 
 Terrain now scrolls as persistent, contiguous ground and pit tiles without clipping the background. Rocks have two collision-matched sizes; trees and nuts are larger. Nuts glow in both themes and retain their daytime colors at night.
+
+Day/night changes now crossfade over four seconds at each 45-second boundary. Forest strips alternate mirrored orientation. Trees and rocks are doubled in size, and the boar is 1.3 times larger, with adjusted collision sizes and jump strength. Obstacles use 3.2–4.2 second spawn intervals and at least 480 pixels of clear space (increasing with speed), including around pits.

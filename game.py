@@ -23,9 +23,20 @@ class World:
     @property
     def night(self): return int(self.time//45)%2==1
     @property
-    def player(self): return pg.Rect(187,self.y-(29 if self.slide else 57),69,27 if self.slide else 53)
+    def night_mix(self):
+        phase=self.time%45
+        if self.time<45:return 0.
+        amount=min(1.,phase/4.)
+        amount=amount*amount*(3-2*amount)
+        return amount if self.night else 1-amount
+    def clear_for_obstacle(self,x,width):
+        gap=max(480,self.speed*1.25)
+        return all(x+width+gap<=o[1] or x>=o[1]+o[3]+gap
+                   for o in self.objects if o[0] not in ('almond','walnut','acorn'))
+    @property
+    def player(self): return pg.Rect(192,self.y-(38 if self.slide else 74),90,35 if self.slide else 69)
     def jump(self):
-        if self.y==GROUND and not self.over: self.vy=-540; self.hold=0; self.slide=False
+        if self.y==GROUND and not self.over: self.vy=-720; self.hold=0; self.slide=False
     def step(self,dt,held=False,slide=False):
         self.collected.clear()
         if self.over:return
@@ -36,6 +47,7 @@ class World:
         if self.y==GROUND:self.vy=0
         while self.terrain_end < self.distance+W+700:
             kind='pit' if self.terrain[-1][0]!='pit' and self.rng.random()<.22 else 'ground'
+            if kind=='pit' and not self.clear_for_obstacle(self.terrain_end-self.distance,200):kind='ground'
             width=200 if kind=='pit' else 490
             if kind=='pit':self.objects.append(['pit',self.terrain_end-self.distance+40+self.speed*dt,GROUND,120,35])
             self.terrain.append((kind,self.terrain_end,width));self.terrain_end+=width
@@ -43,13 +55,14 @@ class World:
         self.next-=dt; self.nut_timer-=dt
         if self.next<=0:
             kind=self.rng.choice(['rock','tree','bird'])
-            size={'rock':(52,43),'tree':(220,28),'bird':(58,30),'pit':(120,35)}[kind]
-            if kind=='rock' and self.rng.random()<.4:size=(78,65)
+            size={'rock':(104,86),'tree':(440,40),'bird':(58,30),'pit':(120,35)}[kind]
+            if kind=='rock' and self.rng.random()<.4:size=(156,130)
             y=GROUND-size[1] if kind=='rock' else GROUND-78 if kind in ('bird','tree') else GROUND
+            if kind=='tree':y=GROUND-185
             if kind=='bird':y=GROUND-self.rng.choice([65,100,145,190])
-            if not any(t=='pit' and start < self.distance+W+60+size[0] and start+width > self.distance+W+60 for t,start,width in self.terrain):
+            if self.clear_for_obstacle(W+60,size[0]) and not any(t=='pit' and start < self.distance+W+60+size[0] and start+width > self.distance+W+60 for t,start,width in self.terrain):
                 self.objects.append([kind,float(W+60),y,*size,self.rng.random()<.5])
-            self.next=self.rng.uniform(1.8,2.6)
+            self.next=self.rng.uniform(3.2,4.2)
         if self.nut_timer<=0:
             kind=self.rng.choices(['almond','walnut','acorn'],[80,17,3])[0]
             self.objects.append([kind,float(W+60),GROUND-self.rng.choice([55,120,175]),34,36]);self.nut_timer=self.rng.uniform(.65,1.15)
@@ -77,9 +90,18 @@ class Game:
     def button(self,label):
         r=pg.Rect(405,400,290,62);pg.draw.rect(self.canvas,(225,178,88),r,border_radius=18);self.text(label,550,431,24,(48,61,44),True);return r
     def draw(self):
-        self.scenery()
-        for o in self.world.objects:self.object(o)
-        if self.mode!='over':self.boar()
+        mix=self.world.night_mix
+        target=self.canvas
+        themes=[(False,1-mix),(True,mix)] if 0<mix<1 else [(mix>=1,1)]
+        for index,(night,alpha) in enumerate(themes):
+            self.art.night=night
+            self.canvas=target if index==0 else pg.Surface((W,H))
+            self.scenery()
+            for o in self.world.objects:self.object(o)
+            if self.mode!='over':self.boar()
+            if index:
+                self.canvas.set_alpha(round(alpha*255));target.blit(self.canvas,(0,0))
+        self.canvas=target
         pg.draw.rect(self.canvas,(38,62,48),(20,15,240,72),border_radius=14);pg.draw.rect(self.canvas,(38,62,48),(W-195,15,175,76),border_radius=14);self.text('LITTLE BOAR',34,25,24);self.text('FOREST RUN',35,57,14,(167,186,143))
         self.text(f'{self.world.score:04d}',W-175,22,36);self.text(f'BEST {self.best:04d}',W-174,67,14)
         self.text(('NIGHT' if self.world.night else 'DAY')+f'  •  {int(self.world.time)//60:02}:{int(self.world.time)%60:02}',470,30,18,(128,153,121))

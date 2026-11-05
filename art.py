@@ -27,6 +27,7 @@ class Art:
             self.sheets[name]=self.sheets[name].subsurface(self.sheets[name].get_bounding_rect()).copy()
         rng=random.Random(71)
         self.stars=[(rng.randrange(1100),rng.randrange(95,280),rng.choice([1,1,1,2])) for _ in range(65)]
+        self.night=False
         self.cache={}
     def sprite(self,key,rect,width):
         cache=(key,tuple(rect),width)
@@ -44,21 +45,22 @@ class Art:
         return self.cache[key]
     def item(self,g,key,width,x,bottom,flip=False):
         sheet=self.sheets[key];s=self.sprite(key,sheet.get_rect(),width)
-        if g.world.night and key not in ('almond','walnut','acorn'):s=self.night_surface(s)
+        if self.night and key not in ('almond','walnut','acorn'):s=self.night_surface(s)
         if flip:s=pg.transform.flip(s,True,False)
-        g.canvas.blit(s,(round(x),round(bottom-s.get_height())))
+        base=s.get_bounding_rect(min_alpha=20).bottom if key in ('rock','tree') else s.get_height()
+        g.canvas.blit(s,(round(x),round(bottom-base)))
     def sleeping(self,g):
-        self.blit(g,'boar',(1410,583 if g.world.night else 140,290,200),115,492,397)
+        self.blit(g,'boar',(1410,583 if self.night else 140,290,200),115,492,397)
     def boar(self,g):
         w=g.world
         pose=3 if g.mode=='over' else 2 if w.slide else 1 if w.y<510 else 0
         # Each pose retains its original proportions; only its display size changes.
         regions=[(65,118,340,225),(510,110,320,220),(950,145,340,200),(1410,140,290,200)]
-        x,y,sw,sh=regions[pose];y+=443 if w.night else 0
+        x,y,sw,sh=regions[pose];y+=443 if self.night else 0
         bob=math.sin(w.time*18)*2 if pose==0 and g.mode=='play' else 0
-        self.blit(g,'boar',(x,y,sw,sh),108,170,w.y+4+bob)
+        self.blit(g,'boar',(x,y,sw,sh),140,170,w.y+4+bob)
     def scenery(self,g):
-        w=g.world;n=w.night
+        w=g.world;n=self.night
         g.canvas.fill((21,40,55) if n else (235,227,193))
         if n:
             for i,(sx,sy,radius) in enumerate(self.stars):
@@ -66,8 +68,13 @@ class Art:
                 pg.draw.circle(g.canvas,(brightness,brightness,220),(sx,sy),radius)
         pg.draw.circle(g.canvas,(227,235,213) if n else (248,203,111),(880,115),34)
         forest=self.sprite('forest',(0,445 if n else 0,1774,442 if n else 443),1100)
-        offset=w.distance*.22%1100
-        for x in (-offset,1100-offset):g.canvas.blit(forest,(round(x),529-forest.get_height()))
+        offset=w.distance*.22
+        first=math.floor(offset/1100)
+        flipkey=('forest-mirror',n)
+        if flipkey not in self.cache:self.cache[flipkey]=pg.transform.flip(forest,True,False)
+        for tile in range(first,first+2):
+            image=self.cache[flipkey] if tile%2 else forest
+            g.canvas.blit(image,(round(tile*1100-offset),529-image.get_height()))
         pg.draw.rect(g.canvas,(25,37,36) if n else (58,51,31),(0,662,1100,18))
         # Persistent world-space tiles share one rounded boundary. No screen clipping
         # and no terrain overdraw through transparent pit openings.
@@ -80,7 +87,7 @@ class Art:
         k,x,y,w,h=o[:5];flip=bool(o[5]) if len(o)>5 else False
         if k=='pit':return  # The terrain stream draws this tile exactly once.
         elif k=='tree':
-            self.item(g,'tree',240,x-5,526,flip)
+            self.item(g,'tree',480,x-5,510,flip)
         else:
             width={'rock':round(w*62/52),'bird':65,'almond':40,'walnut':42,'acorn':42}[k]
             if k in ('almond','walnut','acorn'):
