@@ -3,6 +3,7 @@ import json, math, os, random
 from pathlib import Path
 import pygame as pg
 from art import Art
+from sound import Sounds
 
 W,H,GROUND=1100,680,510
 JUMP={pg.K_SPACE,pg.K_UP,pg.K_w}
@@ -15,7 +16,7 @@ def read_best():
 class World:
     def __init__(self,seed=None):
         self.rng=random.Random(seed); self.time=0.; self.distance=0.; self.y=GROUND; self.vy=0.; self.slide=False
-        self.score=0; self.over=False; self.objects=[]; self.next=2.; self.nut_timer=.65; self.hold=0.
+        self.collected=[]; self.score=0; self.over=False; self.objects=[]; self.next=2.; self.nut_timer=.65; self.hold=0.
     @property
     def speed(self): return 330+min(180,18*int(self.time//60))
     @property
@@ -25,6 +26,7 @@ class World:
     def jump(self):
         if self.y==GROUND and not self.over: self.vy=-540; self.hold=0; self.slide=False
     def step(self,dt,held=False,slide=False):
+        self.collected.clear()
         if self.over:return
         self.time+=dt; self.distance+=self.speed*dt
         self.slide=slide and self.y==GROUND
@@ -36,15 +38,16 @@ class World:
             kind=self.rng.choice(['rock','branch','bird','pit'])
             size={'rock':(52,43),'branch':(95,28),'bird':(58,30),'pit':(120,35)}[kind]
             y=GROUND-size[1] if kind=='rock' else GROUND-78 if kind in ('bird','branch') else GROUND
-            self.objects.append([kind,float(W+60),y,*size]); self.next=self.rng.uniform(1.8,2.6)
+            if kind=='bird':y=GROUND-self.rng.choice([65,100,145,190])
+            self.objects.append([kind,float(W+60),y,*size,self.rng.random()<.5]); self.next=self.rng.uniform(1.8,2.6)
         if self.nut_timer<=0:
             kind=self.rng.choices(['almond','walnut','acorn'],[80,17,3])[0]
             self.objects.append([kind,float(W+60),GROUND-self.rng.choice([55,120,175]),24,28]);self.nut_timer=self.rng.uniform(.65,1.15)
         for obj in self.objects[:]:
-            kind,x,y,w,h=obj; obj[1]-=self.speed*dt
+            kind,x,y,w,h=obj[:5]; obj[1]-=self.speed*dt
             rect=pg.Rect(obj[1],y,w,h)
             if kind in ('almond','walnut','acorn'):
-                if self.player.colliderect(rect):self.score+={'almond':1,'walnut':5,'acorn':10}[kind];self.objects.remove(obj)
+                if self.player.colliderect(rect):self.collected.append(kind);self.score+={'almond':1,'walnut':5,'acorn':10}[kind];self.objects.remove(obj)
             elif kind=='pit':
                 if rect.left+10<self.player.centerx<rect.right-10 and self.y>=GROUND-4:self.over=True
             elif self.player.colliderect(rect):self.over=True
@@ -54,7 +57,7 @@ class Game:
     def __init__(self):
         pg.init();pg.display.set_caption('Little Boar • Forest Run');self.screen=pg.display.set_mode((W,H),pg.RESIZABLE)
         self.canvas=pg.Surface((W,H));self.clock=pg.time.Clock();self.fonts={s:pg.font.SysFont('dejavusans',s,bold=True) for s in (14,18,24,36,68)}
-        self.art=Art();self.world=World();self.mode='title';self.best=read_best();self.saved=False;self.running=True;self.keys=set()
+        self.audio=Sounds();self.art=Art();self.world=World();self.mode='title';self.best=read_best();self.saved=False;self.running=True;self.keys=set()
     def text(self,s,x,y,size=18,color=(246,237,207),center=False):
         image=self.fonts[size].render(str(s),True,color);self.canvas.blit(image,image.get_rect(center=(x,y)) if center else (x,y))
     def ellipse(self,c,r):pg.draw.ellipse(self.canvas,c,r)
@@ -66,12 +69,14 @@ class Game:
     def draw(self):
         self.scenery()
         for o in self.world.objects:self.object(o)
-        self.boar();pg.draw.rect(self.canvas,(38,62,48),(20,15,240,72),border_radius=14);pg.draw.rect(self.canvas,(38,62,48),(W-195,15,175,76),border_radius=14);self.text('LITTLE BOAR',34,25,24);self.text('FOREST RUN',35,57,14,(167,186,143))
+        if self.mode!='over':self.boar()
+        pg.draw.rect(self.canvas,(38,62,48),(20,15,240,72),border_radius=14);pg.draw.rect(self.canvas,(38,62,48),(W-195,15,175,76),border_radius=14);self.text('LITTLE BOAR',34,25,24);self.text('FOREST RUN',35,57,14,(167,186,143))
         self.text(f'{self.world.score:04d}',W-175,22,36);self.text(f'BEST {self.best:04d}',W-174,67,14)
         self.text(('NIGHT' if self.world.night else 'DAY')+f'  •  {int(self.world.time)//60:02}:{int(self.world.time)%60:02}',470,30,18,(128,153,121))
         self.text('↑ / W / SPACE  jump • hold for longer     ↓ / S  slide     P / ESC  pause',550,641,14,center=True)
         if self.mode!='play':
             shade=pg.Surface((W,H),pg.SRCALPHA);shade.fill((10,25,24,190));self.canvas.blit(shade,(0,0))
+            if self.mode=='over':self.art.sleeping(self)
             self.text('A LITTLE BOAR. A BIG ADVENTURE.',550,174,14,(203,180,119),True)
             title={'title':'Into the woods','over':'Game over','pause':'Take a breather'}[self.mode]
             self.text(title,550,245,68,center=True)
@@ -103,6 +108,7 @@ class Game:
                     if pg.Rect(405,400,290,62).collidepoint(pos):self.activate()
             if self.mode=='play':
                 self.world.step(dt,bool(self.keys&JUMP),bool(self.keys&{pg.K_DOWN,pg.K_s}))
+                for kind in self.world.collected:self.audio.collect(kind)
                 if self.world.over:
                     self.mode='over';self.best=max(self.best,self.world.score)
                     try:

@@ -25,6 +25,18 @@ class Mechanics(unittest.TestCase):
         for kind,y,width,height in [('pit',GROUND,120,35),('rock',GROUND-43,52,43)]:
             w=World();w.objects=[[kind,190,y,width,height]];w.step(.001);self.assertTrue(w.over)
             w=World();w.y=GROUND-140;w.objects=[[kind,190,y,width,height]];w.step(.001);self.assertFalse(w.over)
+    def test_collection_events(self):
+        w=World();w.objects=[['acorn',205,GROUND-40,24,28]]
+        w.step(.001);self.assertEqual(w.collected,['acorn'])
+        w.step(.001);self.assertEqual(w.collected,[])
+    def test_spawn_variation(self):
+        heights=set();mirrors=set()
+        w=World(7)
+        for _ in range(200):
+            w.objects=[];w.next=0;w.step(.001)
+            for o in w.objects:
+                if o[0]=='bird':heights.add(o[2]);mirrors.add(o[5])
+        self.assertEqual(len(heights),4);self.assertEqual(mirrors,{False,True})
     def test_render(self):
         g=Game()
         for mode in ('title','play','pause','over'):

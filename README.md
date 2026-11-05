@@ -25,3 +25,5 @@ Jump over rocks and pits; slide beneath birds and branches. Almonds spawn with 8
 `python -m unittest discover -s tests`
 
 The tests exercise jump duration, nut values, obstacle collisions, sliding, cycle/speed boundaries and menu rendering. Windows packaging is configured in `.github/workflows/windows.yml`; Linux validation does not establish a tested Windows binary.
+
+Updated sprites use the supplied individual cutouts. White cutout backgrounds become transparent at load time; source PNGs remain unchanged. Rocks and birds have a 50% left/right mirror chance; background trees also vary orientation. Birds appear at four heights. Locally synthesized collection oinks distinguish acorns. Audio is optional when no sound device is available. The sleeping boar appears inside the game-over overlay only.

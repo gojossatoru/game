@@ -11,6 +11,16 @@ class Art:
             'boar':'Eight boars sprite atlas.png',
             'terrain':'Woodland terrain atlas_ daylight and moonlight.png',
             'objects':'Transparent six-object sprite atlas.png'}.items()}
+        for name in ('almond','walnut','acorn','bird','rock','tree','ground','pit'):
+            path=root/(name+('.png' if name in ('ground','pit') else '.PNG'))
+            self.sheets[name]=pg.image.load(str(path)).convert_alpha()
+            # White-backed cutouts use white as their transparency key at runtime.
+            surface=self.sheets[name]
+            if name not in ('ground','pit'):
+                for x in range(surface.get_width()):
+                    for y in range(surface.get_height()):
+                        c=surface.get_at((x,y))
+                        if min(c.r,c.g,c.b)>235:surface.set_at((x,y),(c.r,c.g,c.b,0))
         self.cache={}
     def sprite(self,key,rect,width):
         cache=(key,tuple(rect),width)
@@ -20,6 +30,12 @@ class Art:
         return self.cache[cache]
     def blit(self,g,key,rect,width,x,bottom):
         s=self.sprite(key,rect,width);g.canvas.blit(s,(round(x),round(bottom-s.get_height())))
+    def item(self,g,key,width,x,bottom,flip=False):
+        sheet=self.sheets[key];s=self.sprite(key,sheet.get_rect(),width)
+        if flip:s=pg.transform.flip(s,True,False)
+        g.canvas.blit(s,(round(x),round(bottom-s.get_height())))
+    def sleeping(self,g):
+        self.blit(g,'boar',(1410,583 if g.world.night else 140,290,200),115,492,397)
     def boar(self,g):
         w=g.world
         pose=3 if g.mode=='over' else 2 if w.slide else 1 if w.y<510 else 0
@@ -35,16 +51,17 @@ class Art:
         forest=self.sprite('forest',(0,443 if n else 0,1774,444 if n else 443),1400)
         offset=w.distance*.22%1400
         for x in (-offset,1400-offset):g.canvas.blit(forest,(x,510-forest.get_height()))
-        # Repeat the exact ground tile; pit artwork is drawn over the path.
-        offset=w.distance%240
-        for i in range(-1,6):self.blit(g,'terrain',(1280,443 if n else 0,494,443),250,i*240-offset,580)
-        pg.draw.rect(g.canvas,(33,47,43) if n else (92,75,49),(0,580,1100,100))
+        for i in range(-1,6):
+            index=int(w.distance*.35//360)+i
+            self.item(g,'tree',190,i*360-(w.distance*.35%360),515,index%3==0)
+        offset=w.distance%350
+        for i in range(-1,5):self.item(g,'ground',355,i*350-offset,625)
+        pg.draw.rect(g.canvas,(58,51,31),(0,625,1100,55))
     def object(self,g,o):
-        k,x,y,w,h=o;n=g.world.night
-        if k=='rock':self.blit(g,'terrain',(470,443 if n else 0,370,443),82,x-15,517)
-        elif k=='pit':self.blit(g,'terrain',(855,443 if n else 0,410,443),400,x-145,695)
+        k,x,y,w,h=o[:5];flip=bool(o[5]) if len(o)>5 else False
+        if k=='pit':self.item(g,'pit',180,x-30,650)
+        elif k=='branch':
+            self.blit(g,'objects',(1045,640,475,240),105,x,y+h)
         else:
-            regions={'almond':(95,150,315,220),'walnut':(610,125,320,270),'acorn':(1150,90,290,330),
-                     'bird':(570,610,400,280),'branch':(1045,640,475,240)}
-            width={'almond':26,'walnut':30,'acorn':30,'bird':65,'branch':105}[k]
-            self.blit(g,'objects',regions[k],width,x,y+h)
+            width={'rock':62,'bird':65,'almond':30,'walnut':32,'acorn':32}[k]
+            self.item(g,k,width,x,y+h,flip if k in ('rock','bird') else False)
