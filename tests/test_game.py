@@ -41,14 +41,26 @@ class Mechanics(unittest.TestCase):
         import pygame as pg
         g=Game();g.activate();g.world.objects=[['pit',790,GROUND,120,35]]
         g.draw()
-        # Nothing from the ground tile may appear through the pit opening.
-        self.assertEqual(g.canvas.get_at((850,500))[:3],(235,227,193))
+        # Persistent terrain tiles must join exactly in world coordinates.
+        for a,b in zip(g.world.terrain,g.world.terrain[1:]):self.assertEqual(a[1]+a[2],b[1])
         original=pg.Surface((2,2),pg.SRCALPHA);original.fill((200,200,200,255))
         night=g.art.night_surface(original)
         self.assertLess(night.get_at((0,0)).r,original.get_at((0,0)).r)
         self.assertEqual(night.get_at((0,0)).a,255)
         self.assertIsNotNone(g.audio.sad)
         self.assertGreater(g.audio.sad.get_length(),g.audio.normal.get_length())
+    def test_terrain_stream_and_rock_sizes(self):
+        w=World(17);sizes=set();seen_pit=False
+        for _ in range(1600):
+            w.over=False;w.y=GROUND-250;w.vy=0;w.next=0
+            w.step(.02)
+            for a,b in zip(w.terrain,w.terrain[1:]):
+                self.assertEqual(a[1]+a[2],b[1])
+                self.assertEqual(round(a[1]+a[2]-w.distance),round(b[1]-w.distance))
+            seen_pit |= any(t[0]=='pit' for t in w.terrain)
+            sizes.update(o[3] for o in w.objects if o[0]=='rock')
+            w.objects=[]
+        self.assertTrue(seen_pit);self.assertEqual(sizes,{52,78})
     def test_render(self):
         g=Game()
         for mode in ('title','play','pause','over'):

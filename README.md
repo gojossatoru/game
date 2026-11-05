@@ -36,3 +36,5 @@ Extract the entire downloaded ZIP and keep `_internal` next to `LittleBoar.exe`.
 The executable is currently unsigned. Chrome or Windows may still block an unfamiliar application, even after a clean scan. Do not disable browser or antivirus protections. Persistent false positives require vendor review and/or legitimate publisher code signing; packaging changes cannot guarantee warning removal.
 
 Tree obstacles replace floating branches; individual trees are no longer background decorations. Slide beneath their branches. Ground tiles are clipped out of pit spans and share the same terrain scale. Night rendering darkens object sprites and adds stars, while retaining the supplied night boar/forest variants. Game over plays one descending sad oink.
+
+Terrain now scrolls as persistent, contiguous ground and pit tiles without clipping the background. Rocks have two collision-matched sizes; trees and nuts are larger. Nuts glow in both themes and retain their daytime colors at night.

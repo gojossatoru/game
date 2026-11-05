@@ -21,7 +21,10 @@ class Art:
                 for x in range(surface.get_width()):
                     for y in range(surface.get_height()):
                         c=surface.get_at((x,y))
-                        if min(c.r,c.g,c.b)>235:surface.set_at((x,y),(c.r,c.g,c.b,0))
+                        if min(c.r,c.g,c.b)>210:surface.set_at((x,y),(0,0,0,0))
+                        elif name=='tree' and min(c.r,c.g,c.b)>125 and max(c.r,c.g,c.b)-min(c.r,c.g,c.b)<45:surface.set_at((x,y),(0,0,0,0))
+        for name in ('almond','walnut','acorn'):
+            self.sheets[name]=self.sheets[name].subsurface(self.sheets[name].get_bounding_rect()).copy()
         rng=random.Random(71)
         self.stars=[(rng.randrange(1100),rng.randrange(95,280),rng.choice([1,1,1,2])) for _ in range(65)]
         self.cache={}
@@ -41,7 +44,7 @@ class Art:
         return self.cache[key]
     def item(self,g,key,width,x,bottom,flip=False):
         sheet=self.sheets[key];s=self.sprite(key,sheet.get_rect(),width)
-        if g.world.night:s=self.night_surface(s)
+        if g.world.night and key not in ('almond','walnut','acorn'):s=self.night_surface(s)
         if flip:s=pg.transform.flip(s,True,False)
         g.canvas.blit(s,(round(x),round(bottom-s.get_height())))
     def sleeping(self,g):
@@ -62,29 +65,27 @@ class Art:
                 brightness=int(175+55*math.sin(w.time*.8+i))
                 pg.draw.circle(g.canvas,(brightness,brightness,220),(sx,sy),radius)
         pg.draw.circle(g.canvas,(227,235,213) if n else (248,203,111),(880,115),34)
-        forest=self.sprite('forest',(0,445 if n else 0,1774,442 if n else 443),1400)
-        offset=w.distance*.22%1400
-        for x in (-offset,1400-offset):g.canvas.blit(forest,(x,470-forest.get_height()))
-        # Terrain uses the same pixel scale and a shared walkable surface at y=510.
-        # Cut ground out of the entire pit tile, including its transparent opening.
-        pits=sorted((int(o[1]-40),int(o[1]+160)) for o in w.objects if o[0]=='pit')
-        spans=[];left=0
-        for start,end in pits:
-            if start>left:spans.append((left,min(1100,start)))
-            left=max(left,end)
-        if left<1100:spans.append((max(0,left),1100))
-        for left,right in spans:
-            if right<=left:continue
-            g.canvas.set_clip(pg.Rect(left,0,right-left,680))
-            offset=w.distance%490
-            for i in range(-1,4):self.item(g,'ground',492,i*490-offset,662)
-        g.canvas.set_clip(None)
+        forest=self.sprite('forest',(0,445 if n else 0,1774,442 if n else 443),1100)
+        offset=w.distance*.22%1100
+        for x in (-offset,1100-offset):g.canvas.blit(forest,(round(x),529-forest.get_height()))
         pg.draw.rect(g.canvas,(25,37,36) if n else (58,51,31),(0,662,1100,18))
+        # Persistent world-space tiles share one rounded boundary. No screen clipping
+        # and no terrain overdraw through transparent pit openings.
+        for kind,start,width in w.terrain:
+            left=round(start-w.distance);right=round(start+width-w.distance)
+            if right<0 or left>1100:continue
+            self.item(g,kind,right-left,left,666 if kind=='pit' else 662)
+        pg.draw.rect(g.canvas,(25,37,36) if n else (58,51,31),(0,666,1100,14))
     def object(self,g,o):
         k,x,y,w,h=o[:5];flip=bool(o[5]) if len(o)>5 else False
-        if k=='pit':self.item(g,'pit',200,x-40,666)
+        if k=='pit':return  # The terrain stream draws this tile exactly once.
         elif k=='tree':
-            self.item(g,'tree',180,x-5,522,flip)
+            self.item(g,'tree',240,x-5,526,flip)
         else:
-            width={'rock':62,'bird':65,'almond':30,'walnut':32,'acorn':32}[k]
+            width={'rock':round(w*62/52),'bird':65,'almond':40,'walnut':42,'acorn':42}[k]
+            if k in ('almond','walnut','acorn'):
+                glow=pg.Surface((84,84),pg.SRCALPHA)
+                for radius in range(40,8,-2):
+                    pg.draw.circle(glow,(255,202,90,int((41-radius)*1.4)),(42,42),radius)
+                g.canvas.blit(glow,(round(x+width/2-42),round(y+h-20-42)))
             self.item(g,k,width,x,y+h,flip if k in ('rock','bird') else False)

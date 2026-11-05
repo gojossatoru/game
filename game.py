@@ -16,6 +16,7 @@ def read_best():
 class World:
     def __init__(self,seed=None):
         self.rng=random.Random(seed); self.time=0.; self.distance=0.; self.y=GROUND; self.vy=0.; self.slide=False
+        self.terrain=[('ground',i*490,490) for i in range(4)]; self.terrain_end=1960
         self.collected=[]; self.score=0; self.over=False; self.objects=[]; self.next=2.; self.nut_timer=.65; self.hold=0.
     @property
     def speed(self): return 330+min(180,18*int(self.time//60))
@@ -33,16 +34,25 @@ class World:
         gravity=620 if held and self.vy<0 and self.hold<.28 else 1700
         self.hold+=dt; self.vy+=gravity*dt; self.y=min(GROUND,self.y+self.vy*dt)
         if self.y==GROUND:self.vy=0
+        while self.terrain_end < self.distance+W+700:
+            kind='pit' if self.terrain[-1][0]!='pit' and self.rng.random()<.22 else 'ground'
+            width=200 if kind=='pit' else 490
+            if kind=='pit':self.objects.append(['pit',self.terrain_end-self.distance+40+self.speed*dt,GROUND,120,35])
+            self.terrain.append((kind,self.terrain_end,width));self.terrain_end+=width
+        self.terrain=[tile for tile in self.terrain if tile[1]+tile[2]>=self.distance-10]
         self.next-=dt; self.nut_timer-=dt
         if self.next<=0:
-            kind=self.rng.choice(['rock','tree','bird','pit'])
-            size={'rock':(52,43),'tree':(165,28),'bird':(58,30),'pit':(120,35)}[kind]
+            kind=self.rng.choice(['rock','tree','bird'])
+            size={'rock':(52,43),'tree':(220,28),'bird':(58,30),'pit':(120,35)}[kind]
+            if kind=='rock' and self.rng.random()<.4:size=(78,65)
             y=GROUND-size[1] if kind=='rock' else GROUND-78 if kind in ('bird','tree') else GROUND
             if kind=='bird':y=GROUND-self.rng.choice([65,100,145,190])
-            self.objects.append([kind,float(W+60),y,*size,self.rng.random()<.5]); self.next=self.rng.uniform(1.8,2.6)
+            if not any(t=='pit' and start < self.distance+W+60+size[0] and start+width > self.distance+W+60 for t,start,width in self.terrain):
+                self.objects.append([kind,float(W+60),y,*size,self.rng.random()<.5])
+            self.next=self.rng.uniform(1.8,2.6)
         if self.nut_timer<=0:
             kind=self.rng.choices(['almond','walnut','acorn'],[80,17,3])[0]
-            self.objects.append([kind,float(W+60),GROUND-self.rng.choice([55,120,175]),24,28]);self.nut_timer=self.rng.uniform(.65,1.15)
+            self.objects.append([kind,float(W+60),GROUND-self.rng.choice([55,120,175]),34,36]);self.nut_timer=self.rng.uniform(.65,1.15)
         for obj in self.objects[:]:
             kind,x,y,w,h=obj[:5]; obj[1]-=self.speed*dt
             rect=pg.Rect(obj[1],y,w,h)
