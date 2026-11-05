@@ -13,7 +13,7 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name LittleBoar game.py
+      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --add-data "sprites;sprites" --name LittleBoar game.py
       - uses: actions/upload-artifact@v4
         with:
           name: LittleBoar-Windows

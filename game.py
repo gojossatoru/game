@@ -2,6 +2,7 @@
 import json, math, os, random
 from pathlib import Path
 import pygame as pg
+from art import Art
 
 W,H,GROUND=1100,680,510
 JUMP={pg.K_SPACE,pg.K_UP,pg.K_w}
@@ -53,61 +54,13 @@ class Game:
     def __init__(self):
         pg.init();pg.display.set_caption('Little Boar • Forest Run');self.screen=pg.display.set_mode((W,H),pg.RESIZABLE)
         self.canvas=pg.Surface((W,H));self.clock=pg.time.Clock();self.fonts={s:pg.font.SysFont('dejavusans',s,bold=True) for s in (14,18,24,36,68)}
-        self.world=World();self.mode='title';self.best=read_best();self.saved=False;self.running=True;self.keys=set()
+        self.art=Art();self.world=World();self.mode='title';self.best=read_best();self.saved=False;self.running=True;self.keys=set()
     def text(self,s,x,y,size=18,color=(246,237,207),center=False):
         image=self.fonts[size].render(str(s),True,color);self.canvas.blit(image,image.get_rect(center=(x,y)) if center else (x,y))
     def ellipse(self,c,r):pg.draw.ellipse(self.canvas,c,r)
-    def boar(self):
-        w=self.world;x=177;y=w.y; low=w.slide; bob=math.sin(w.time*20)*3 if y==GROUND and self.mode=='play' else 0
-        y+=bob; height=32 if low else 55
-        for i in range(4):
-            dx=math.sin(w.time*19+i*2)*9 if self.mode=='play' else 0
-            pg.draw.line(self.canvas,(86,53,42),(x+18+i*15,y-16),(x+15+i*15+dx,y-2),10)
-        self.ellipse((151,95,61),(x,y-height-6,82,height));self.ellipse((170,109,70),(x+53,y-height-7,40,height-1))
-        for i in range(3):pg.draw.arc(self.canvas,(244,209,146),(x+9,y-height+2+i*11,49,15),.2,2.8,5)
-        pg.draw.polygon(self.canvas,(124,75,52),[(x+60,y-height+3),(x+59,y-height-23),(x+76,y-height-3)])
-        self.ellipse((233,157,136),(x+78,y-30 if not low else y-23,25,21));pg.draw.circle(self.canvas,(32,29,23),(x+78,int(y-height+16)),4)
-        for dx in (85,94):pg.draw.line(self.canvas,(105,65,54),(x+dx,y-23 if not low else y-16),(x+dx-1,y-17 if not low else y-10),3)
-        pg.draw.arc(self.canvas,(130,82,54),(x-15,y-38,23,20),2,5.7,4)
-    def scenery(self):
-        w=self.world;n=w.night;sky=(23,42,58) if n else (230,221,181);self.canvas.fill(sky)
-        if n:
-            for i in range(45):pg.draw.circle(self.canvas,(183,202,190),((i*137)%W,45+(i*73)%245),1)
-        pg.draw.circle(self.canvas,(224,231,202) if n else (246,191,90),(880,125),40)
-        for layer in range(3):
-            color=([(42,69,76),(35,82,80),(29,65,61)] if n else [(166,181,128),(113,145,100),(66,111,77)])[layer]
-            offset=w.distance*(.12+layer*.13)%180
-            for i in range(-1,9):
-                x=i*180-offset;top=220+layer*65+math.sin(i*7)*30
-                pg.draw.rect(self.canvas,color,(x+65,top+55,20,GROUND-top))
-                for yy,rr in [(top+60,65),(top+30,50),(top,32)]:pg.draw.circle(self.canvas,color,(int(x+75),int(yy)),rr)
-        pg.draw.rect(self.canvas,(47,51,39) if n else (110,86,55),(0,GROUND,W,H-GROUND))
-        pg.draw.rect(self.canvas,(59,104,79) if n else (137,164,77),(0,GROUND,W,10))
-        for i in range(65):
-            x=(i*83-w.distance)%W;y=GROUND+28+(i*29)%140
-            self.ellipse((67,64,45) if n else (131,103,65),(x,y,9,4))
-    def object(self,o):
-        k,x,y,w,h=o;x=int(x)
-        if k=='pit':
-            pg.draw.rect(self.canvas,(17,27,29),(x,y,w,110));pg.draw.line(self.canvas,(66,52,38),(x,y+110),(x+w,y+110),6)
-        elif k=='rock':
-            pg.draw.polygon(self.canvas,(114,122,126),[(x,y+h),(x+8,y+13),(x+29,y),(x+45,y+17),(x+w,y+h)])
-            pg.draw.polygon(self.canvas,(160,167,162),[(x+8,y+13),(x+29,y),(x+35,y+12),(x+14,y+29)])
-        elif k=='branch':
-            pg.draw.line(self.canvas,(91,69,46),(x,y+22),(x+w,y+12),13)
-            for i in range(4):self.ellipse((102,142,79),(x+12+i*20,y-5,23,15))
-        elif k=='bird':
-            self.ellipse((161,108,75),(x,y+7,48,23));self.ellipse((234,210,168),(x+8,y+18,32,13))
-            flap=math.sin(self.world.time*15)*13
-            pg.draw.polygon(self.canvas,(133,83,57),[(x+20,y+15),(x+45,y-15+flap),(x+42,y+20)])
-            pg.draw.polygon(self.canvas,(223,176,89),[(x,y+13),(x-10,y+18),(x+3,y+20)]);pg.draw.circle(self.canvas,(26,30,25),(x+9,y+12),3)
-        else:
-            if k=='acorn':pg.draw.circle(self.canvas,(206,166,70),(x+12,y+14),22,1)
-            self.ellipse((213,150,77) if k!='walnut' else (177,115,64),(x,y,w,h))
-            if k=='acorn':
-                self.ellipse((111,75,43),(x-2,y-2,28,12));pg.draw.line(self.canvas,(108,78,47),(x+12,y),(x+15,y-8),4)
-            else:
-                for i in range(2):pg.draw.arc(self.canvas,(246,195,120),(x+4+i*6,y+3,10,22),1,4.8,2)
+    def boar(self):self.art.boar(self)
+    def scenery(self):self.art.scenery(self)
+    def object(self,o):self.art.object(self,o)
     def button(self,label):
         r=pg.Rect(405,400,290,62);pg.draw.rect(self.canvas,(225,178,88),r,border_radius=18);self.text(label,550,431,24,(48,61,44),True);return r
     def draw(self):

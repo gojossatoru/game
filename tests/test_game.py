@@ -29,5 +29,13 @@ class Mechanics(unittest.TestCase):
         g=Game()
         for mode in ('title','play','pause','over'):
             g.mode=mode;g.draw()
-        g.world.time=45;g.draw()
+        for night in (False,True):
+            g.world.time=45 if night else 0
+            for mode in ('play','over'):
+                g.mode=mode
+                for slide in (False,True):
+                    g.world.slide=slide
+                    for kind in ('almond','walnut','acorn','rock','branch','bird','pit'):
+                        g.world.objects=[[kind,600,450,40,30]];g.draw()
+            g.world.y=400;g.draw()
 if __name__=='__main__':unittest.main()

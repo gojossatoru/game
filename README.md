@@ -1,6 +1,6 @@
 # Little Boar — Forest Run
 
-A native offline desktop runner built with Python and pygame-ce. No browser or server is used. Custom procedural artwork depicts a striped baby boar and a layered forest; the reference images are not bundled assets.
+A native offline desktop runner built with Python and pygame-ce. No browser or server is used. The original supplied PNG atlases are bundled unchanged. The renderer selects sprite regions and scales proportionally, using the supplied day/night variants and boar poses.
 
 ## Windows
 
