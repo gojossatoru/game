@@ -1,5 +1,7 @@
 name: Build Windows game
 on: [push, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: windows-latest
@@ -13,8 +15,11 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --add-data "sprites;sprites" --name LittleBoar game.py
+      - run: python -m PyInstaller --noconfirm --clean --onedir --noupx --windowed --add-data "sprites;sprites" --name LittleBoar game.py
+      - name: Scan packaged game with Windows Defender
+        shell: pwsh
+        run: ./scripts/scan-windows.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: LittleBoar-Windows
-          path: dist/LittleBoar.exe
+          path: dist/LittleBoar/

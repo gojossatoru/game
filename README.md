@@ -4,7 +4,7 @@ A native offline desktop runner built with Python and pygame-ce. No browser or s
 
 ## Windows
 
-Install Python 3.12 or newer, then double-click `build-windows.bat`. The resulting `dist/LittleBoar.exe` runs without Python or internet. Windows executables must be built on Windows. Alternatively, push this repository to GitHub and download `LittleBoar-Windows` from the Build Windows game workflow's artifacts.
+Install Python 3.12 or newer, then double-click `build-windows.bat`. The resulting `dist/LittleBoar/LittleBoar.exe` runs without Python or internet. Windows executables must be built on Windows. Alternatively, push this repository to GitHub and download `LittleBoar-Windows` from the Build Windows game workflow's artifacts.
 
 ## Run from source
 
@@ -27,3 +27,10 @@ Jump over rocks and pits; slide beneath birds and branches. Almonds spawn with 8
 The tests exercise jump duration, nut values, obstacle collisions, sliding, cycle/speed boundaries and menu rendering. Windows packaging is configured in `.github/workflows/windows.yml`; Linux validation does not establish a tested Windows binary.
 
 Updated sprites use the supplied individual cutouts. White cutout backgrounds become transparent at load time; source PNGs remain unchanged. Rocks and birds have a 50% left/right mirror chance; background trees also vary orientation. Birds appear at four heights. Locally synthesized collection oinks distinguish acorns. Audio is optional when no sound device is available. The sleeping boar appears inside the game-over overlay only.
+
+
+## Windows download safety
+
+Extract the entire downloaded ZIP and keep `_internal` next to `LittleBoar.exe`. The build now produces a regular application folder, without executable packing or runtime self-extraction. GitHub publishes the artifact only after a Windows Defender signature update and scan succeed. The download includes the scan status and SHA-256 checksums. A checksum identifies a file; it is not proof of safety.
+
+The executable is currently unsigned. Chrome or Windows may still block an unfamiliar application, even after a clean scan. Do not disable browser or antivirus protections. Persistent false positives require vendor review and/or legitimate publisher code signing; packaging changes cannot guarantee warning removal.
