@@ -20,7 +20,7 @@ class Mechanics(unittest.TestCase):
             w.objects=[[kind,205,GROUND-40,24,28]];before=w.score;w.step(.001);self.assertEqual(w.score-before,value)
     def test_slide(self):
         for sliding in (False,True):
-            w=World();w.objects=[['branch',195,GROUND-78,95,28]];w.step(.001,False,sliding);self.assertEqual(w.over,not sliding)
+            w=World();w.objects=[['tree',195,GROUND-78,95,28]];w.step(.001,False,sliding);self.assertEqual(w.over,not sliding)
     def test_pits_and_rocks(self):
         for kind,y,width,height in [('pit',GROUND,120,35),('rock',GROUND-43,52,43)]:
             w=World();w.objects=[[kind,190,y,width,height]];w.step(.001);self.assertTrue(w.over)
@@ -37,6 +37,18 @@ class Mechanics(unittest.TestCase):
             for o in w.objects:
                 if o[0]=='bird':heights.add(o[2]);mirrors.add(o[5])
         self.assertEqual(len(heights),4);self.assertEqual(mirrors,{False,True})
+    def test_night_and_pit_opening(self):
+        import pygame as pg
+        g=Game();g.activate();g.world.objects=[['pit',790,GROUND,120,35]]
+        g.draw()
+        # Nothing from the ground tile may appear through the pit opening.
+        self.assertEqual(g.canvas.get_at((850,500))[:3],(235,227,193))
+        original=pg.Surface((2,2),pg.SRCALPHA);original.fill((200,200,200,255))
+        night=g.art.night_surface(original)
+        self.assertLess(night.get_at((0,0)).r,original.get_at((0,0)).r)
+        self.assertEqual(night.get_at((0,0)).a,255)
+        self.assertIsNotNone(g.audio.sad)
+        self.assertGreater(g.audio.sad.get_length(),g.audio.normal.get_length())
     def test_render(self):
         g=Game()
         for mode in ('title','play','pause','over'):
@@ -47,7 +59,7 @@ class Mechanics(unittest.TestCase):
                 g.mode=mode
                 for slide in (False,True):
                     g.world.slide=slide
-                    for kind in ('almond','walnut','acorn','rock','branch','bird','pit'):
+                    for kind in ('almond','walnut','acorn','rock','tree','bird','pit'):
                         g.world.objects=[[kind,600,450,40,30]];g.draw()
             g.world.y=400;g.draw()
 if __name__=='__main__':unittest.main()

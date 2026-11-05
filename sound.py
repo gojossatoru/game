@@ -6,7 +6,7 @@ import pygame as pg
 
 class Sounds:
     def __init__(self):
-        self.normal=self.happy=None
+        self.normal=self.happy=self.sad=None
         if not pg.mixer.get_init():return
         rate,fmt,channels=pg.mixer.get_init()
         if fmt!=-16:return
@@ -20,6 +20,17 @@ class Sounds:
                 data.extend([int(value*32767)]*channels)
             return pg.mixer.Sound(buffer=data)
         self.normal=grunt(False);self.happy=grunt(True)
+        data=array('h');duration=.75;phase=0
+        for i in range(int(rate*duration)):
+            t=i/rate;phase+=2*math.pi*(145-80*t/duration)/rate
+            envelope=math.sin(math.pi*t/duration)**1.5
+            value=(math.sin(phase)+.4*math.sin(2*phase))*envelope*.23
+            data.extend([int(value*32767)]*channels)
+        self.sad=pg.mixer.Sound(buffer=data)
+    def game_over(self):
+        if self.sad:
+            pg.mixer.stop()
+            self.sad.play()
     def collect(self,kind):
         sound=self.happy if kind=='acorn' else self.normal
         if sound:sound.play()

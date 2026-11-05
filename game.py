@@ -35,9 +35,9 @@ class World:
         if self.y==GROUND:self.vy=0
         self.next-=dt; self.nut_timer-=dt
         if self.next<=0:
-            kind=self.rng.choice(['rock','branch','bird','pit'])
-            size={'rock':(52,43),'branch':(95,28),'bird':(58,30),'pit':(120,35)}[kind]
-            y=GROUND-size[1] if kind=='rock' else GROUND-78 if kind in ('bird','branch') else GROUND
+            kind=self.rng.choice(['rock','tree','bird','pit'])
+            size={'rock':(52,43),'tree':(165,28),'bird':(58,30),'pit':(120,35)}[kind]
+            y=GROUND-size[1] if kind=='rock' else GROUND-78 if kind in ('bird','tree') else GROUND
             if kind=='bird':y=GROUND-self.rng.choice([65,100,145,190])
             self.objects.append([kind,float(W+60),y,*size,self.rng.random()<.5]); self.next=self.rng.uniform(1.8,2.6)
         if self.nut_timer<=0:
@@ -110,7 +110,7 @@ class Game:
                 self.world.step(dt,bool(self.keys&JUMP),bool(self.keys&{pg.K_DOWN,pg.K_s}))
                 for kind in self.world.collected:self.audio.collect(kind)
                 if self.world.over:
-                    self.mode='over';self.best=max(self.best,self.world.score)
+                    self.audio.game_over();self.mode='over';self.best=max(self.best,self.world.score)
                     try:
                         SAVE.parent.mkdir(parents=True,exist_ok=True);temp=SAVE.with_suffix('.tmp');temp.write_text(json.dumps({'best':self.best}));temp.replace(SAVE)
                     except OSError:pass
